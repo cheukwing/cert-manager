@@ -17,15 +17,18 @@ limitations under the License.
 package certificate
 
 import (
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha1"
+	controllerutil "github.com/jetstack/cert-manager/pkg/controller"
 	"github.com/jetstack/cert-manager/test/e2e/framework"
 	"github.com/jetstack/cert-manager/test/e2e/framework/addon"
 	"github.com/jetstack/cert-manager/test/e2e/framework/addon/pebble"
@@ -158,10 +161,14 @@ var _ = framework.CertManagerDescribe("ACME webhook DNS provider", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			var order *v1alpha1.Order
+			hash, err := controllerutil.HashName(types.NamespacedName{Name: cert.Name, Namespace: cert.Namespace})
+			Expect(err).NotTo(HaveOccurred())
+			certHash := fmt.Sprint(hash)
+
 			pollErr := wait.PollImmediate(500*time.Millisecond, time.Second*30,
 				func() (bool, error) {
 					l, err := f.CertManagerClientSet.CertmanagerV1alpha1().Orders(f.Namespace.Name).List(metav1.ListOptions{
-						LabelSelector: "acme.cert-manager.io/certificate-name=" + cert.Name,
+						LabelSelector: "acme.cert-manager.io/certificate-hash=" + certHash,
 					})
 					Expect(err).NotTo(HaveOccurred())
 
